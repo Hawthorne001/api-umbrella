@@ -50,7 +50,7 @@ gem "rails_compatible_cookies_utils", "~> 0.1.0"
 gem "addressable", "~> 2.8.0"
 
 # Browser/JavaScript integration tests
-gem "capybara", "~> 3.32"
+gem "capybara", "~> 3.40", ">= 3.40.0"
 gem "selenium-webdriver", "~> 4.15"
 
 # Take screenshots on capybara test failures
