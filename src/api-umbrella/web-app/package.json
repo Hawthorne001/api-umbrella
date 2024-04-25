@@ -2,8 +2,8 @@
   "name": "api-umbrella-web-app",
   "version": "0.0.0",
   "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^6.1.0",
-    "@fortawesome/free-brands-svg-icons": "^6.1.0"
+    "@fortawesome/fontawesome-svg-core": "^6.5.2",
+    "@fortawesome/free-brands-svg-icons": "^6.5.2"
   },
   "devDependencies": {
     "bootstrap": "^4.2.1",
