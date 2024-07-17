@@ -21,8 +21,8 @@ gem "minitest-hooks", "~> 1.5.0"
 gem "minitest-ci", "~> 3.4.0"
 
 # Ruby lint/style checker
-gem "rubocop", "~> 1.4", :require => false
-gem "rubocop-minitest", "~> 0.34.5", :require => false
+gem "rubocop", "~> 1.60", ">= 1.60.2", :require => false
+gem "rubocop-minitest", "~> 0.35.0", :require => false
 
 # Running background processes
 gem "childprocess"
@@ -51,7 +51,7 @@ gem "addressable", "~> 2.8.0"
 
 # Browser/JavaScript integration tests
 gem "capybara", "~> 3.32"
-gem "selenium-webdriver", "~> 4.15"
+gem "selenium-webdriver", "~> 4.17", ">= 4.17.0"
 
 # Take screenshots on capybara test failures
 gem "capybara-screenshot", "~> 1.0.22"
