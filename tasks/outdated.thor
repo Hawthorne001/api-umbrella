@@ -20,6 +20,9 @@ class Outdated < Thor
     "envoy_control_plane" => {
       :git => "https://github.com/GUI/envoy-control-plane.git",
     },
+    "fluent_bit" => {
+      :git => "https://github.com/fluent/fluent-bit.git",
+    },
     "glauth" => {
       :git => "https://github.com/glauth/glauth.git",
     },
@@ -48,7 +51,7 @@ class Outdated < Thor
     },
     "nodejs" => {
       :git => "https://github.com/nodejs/node.git",
-      :constraint => "~> 20.9",
+      :constraint => "~> 22.11",
     },
     "openresty" => {
       :git => "https://github.com/openresty/openresty.git",
@@ -56,8 +59,8 @@ class Outdated < Thor
     "perp" => {
       :http => "http://b0llix.net/perp/site.cgi?page=download",
     },
-    "rsyslog" => {
-      :git => "https://github.com/rsyslog/rsyslog.git",
+    "pnpm" => {
+      :git => "https://github.com/pnpm/pnpm.git",
     },
     "shellcheck" => {
       :git => "https://github.com/koalaman/shellcheck.git",
@@ -68,9 +71,6 @@ class Outdated < Thor
     "trafficserver" => {
       :http => "https://archive.apache.org/dist/trafficserver/",
     },
-    "yarn" => {
-      :git => "https://github.com/yarnpkg/yarn.git",
-    },
   }.freeze
 
   class AdminUi < Thor
@@ -79,7 +79,7 @@ class Outdated < Thor
     desc "npm", "List outdated admin-ui NPM dependencies"
     def npm
       Dir.chdir(File.join(ENV.fetch("API_UMBRELLA_SRC_ROOT"), "src/api-umbrella/admin-ui")) do
-        system("yarn", "outdated", exception: false)
+        system("pnpm", "outdated", exception: false)
       end
     end
   end
@@ -110,7 +110,7 @@ class Outdated < Thor
     desc "npm", "List outdated web-app NPM dependencies"
     def npm
       Dir.chdir(File.join(ENV.fetch("API_UMBRELLA_SRC_ROOT"), "src/api-umbrella/web-app")) do
-        system("yarn", "outdated", exception: false)
+        system("pnpm", "outdated", exception: false)
       end
     end
   end
@@ -121,7 +121,7 @@ class Outdated < Thor
     desc "npm", "List outdated example-website NPM dependencies"
     def npm
       Dir.chdir(File.join(ENV.fetch("API_UMBRELLA_SRC_ROOT"), "src/api-umbrella/example-website")) do
-        system("yarn", "outdated", exception: false)
+        system("pnpm", "outdated", exception: false)
       end
     end
   end
@@ -208,6 +208,13 @@ class Outdated < Thor
     def tag_to_semver(name, tag)
       tag.downcase!
 
+      case name
+      when "fluent_bit"
+        unless tag.start_with?("v")
+          return nil
+        end
+      end
+
       # Remove prefixes containing the project name.
       tag.gsub!(/^#{name}[-_]/i, "")
       tag.gsub!(/^#{name.tr("_", "-")}[-_]/i, "")
@@ -222,7 +229,7 @@ class Outdated < Thor
       tag.gsub!(/^[vr](\d)/, '\1')
 
       # Project-specific normalizations.
-      case(name)
+      case name
       when "postgresql"
         tag.gsub!(/^rel_?/, "")
         tag.tr!("_", ".")
@@ -267,14 +274,14 @@ class Outdated < Thor
         versions[name][:wanted_version] = latest_commit[0, 7]
       elsif(options[:git])
         tags = `git ls-remote --tags #{options[:git]}`.lines
-        tags.map! { |tag| tag_to_semver(name, tag.match(%r{refs/tags/(.+)$})[1]) }
+        tags.map! { |tag| tag_to_semver(name, tag.match(%r{refs/tags/(.+)$})[1]) }.compact
       elsif(options[:luarock])
         tags = luarocks_manifest.fetch("repository").fetch(options[:luarock]).keys
         tags.map! { |tag| luarock_version_to_semver(tag) }
       elsif(options[:http])
         content = Net::HTTP.get_response(URI.parse(options[:http])).body
         tags = content.scan(/#{name}-[\d.]+.tar/)
-        tags.map! { |f| tag_to_semver(name, File.basename(f, ".tar")) }
+        tags.map! { |f| tag_to_semver(name, File.basename(f, ".tar")) }.compact
       end
 
       tags.compact!

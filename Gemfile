@@ -6,23 +6,26 @@ ruby "~> 3.1"
 gem "thor", "~> 1.3.0"
 
 # Tests
-gem "minitest", "~> 5.21.2"
+gem "minitest", "~> 5.25.1"
 
 # CLI helper for running tests
-gem "minitest-sprint", "~> 1.2.0"
+gem "minitest-sprint", "~> 1.3.0"
 
 # More test outputs
-gem "minitest-reporters", "~> 1.6.0"
+gem "minitest-reporters", "~> 1.7.1"
 
 # For an "after_all" callback.
 gem "minitest-hooks", "~> 1.5.0"
+
+# Retry certain flaky tests.
+gem "minitest-retry", "~> 0.2.2"
 
 # Test metadata for CI environment.
 gem "minitest-ci", "~> 3.4.0"
 
 # Ruby lint/style checker
 gem "rubocop", "~> 1.4", :require => false
-gem "rubocop-minitest", "~> 0.34.5", :require => false
+gem "rubocop-minitest", "~> 0.36.0", :require => false
 
 # Running background processes
 gem "childprocess"
@@ -35,13 +38,14 @@ gem "multi_json", "~> 1.15.0"
 gem "oj", "~> 3.10"
 
 # Database libraries
-gem "activerecord", "~> 7.1.1", :require => "active_record"
+gem "activerecord", "~> 7.2.2", :require => "active_record"
 gem "pg", "~> 1.5.3"
-gem "elasticsearch", "~> 7.13.3"
-gem "active_attr", "~> 0.16.0"
+gem "opensearch-ruby", "~> 3.4.0"
+gem "faraday-typhoeus", "~> 1.1.0"
+gem "active_attr", "~> 0.17.0"
 
 # Factories for test database data
-gem "factory_bot", "~> 6.4.0"
+gem "factory_bot", "~> 6.5.0"
 
 # Programmatically generate Rails session cookies.
 gem "rails_compatible_cookies_utils", "~> 0.1.0"
@@ -63,13 +67,13 @@ gem "capybara-shadowdom", "~> 0.3.0"
 gem "nokogiri", "~> 1.14"
 
 # Useful additions
-gem "activesupport", "~> 7.1.1"
+gem "activesupport", "~> 7.2.2"
 
 # Generating fake strings and data.
 gem "faker", "~> 3.0"
 
 # Concurrency helpers.
-gem "concurrent-ruby", "~> 1.2.0"
+gem "concurrent-ruby", "~> 1.3.3"
 
 # Time zone randomization for tests.
 gem "zonebie", "~> 0.6.1"
@@ -90,4 +94,4 @@ gem "awesome_print", "~> 1.9.2"
 gem "ice_nine", "~> 0.11.2"
 
 # Testing SMTP directly.
-gem "net-smtp", "~> 0.4.0"
+gem "net-smtp", "~> 0.5.0"

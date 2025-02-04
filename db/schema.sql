@@ -31,13 +31,6 @@ COMMENT ON SCHEMA audit IS 'Out-of-table audit/history logging tables and trigge
 
 
 --
--- Name: public; Type: SCHEMA; Schema: -; Owner: -
---
-
--- *not* creating schema, since initdb creates it
-
-
---
 -- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
 --
 
@@ -72,14 +65,14 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 CREATE FUNCTION api_umbrella.analytics_cache_extract_unique_user_ids() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-BEGIN
-  IF (jsonb_typeof(NEW.data->'aggregations'->'hits_over_time'->'buckets'->0->'unique_user_ids'->'buckets') = 'array') THEN
-    NEW.unique_user_ids := (SELECT array_agg(DISTINCT bucket->>'key')::uuid[] FROM jsonb_array_elements(NEW.data->'aggregations'->'hits_over_time'->'buckets'->0->'unique_user_ids'->'buckets') AS bucket);
-  END IF;
+      BEGIN
+        IF (jsonb_typeof(NEW.data->'aggregations'->'unique_user_ids'->'buckets') = 'array') THEN
+          NEW.unique_user_ids := (SELECT array_agg(DISTINCT bucket->>'key')::uuid[] FROM jsonb_array_elements(NEW.data->'aggregations'->'unique_user_ids'->'buckets') AS bucket);
+        END IF;
 
-  RETURN NEW;
-END;
-$$;
+        RETURN NEW;
+      END;
+      $$;
 
 
 --
@@ -628,12 +621,12 @@ COMMENT ON FUNCTION public.jsonb_minus("left" jsonb, "right" jsonb) IS 'Delete m
 
 
 --
--- Name: array_accum(anyarray); Type: AGGREGATE; Schema: api_umbrella; Owner: -
+-- Name: array_accum(anycompatiblearray); Type: AGGREGATE; Schema: api_umbrella; Owner: -
 --
 
-CREATE AGGREGATE api_umbrella.array_accum(anyarray) (
+CREATE AGGREGATE api_umbrella.array_accum(anycompatiblearray) (
     SFUNC = array_cat,
-    STYPE = anyarray,
+    STYPE = anycompatiblearray,
     INITCOND = '{}'
 );
 
@@ -2824,3 +2817,5 @@ INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1699650325');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1700281762');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1700346585');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1701483732');
+INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1721347955');
+INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1738353016');

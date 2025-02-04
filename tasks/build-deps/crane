@@ -3,14 +3,14 @@
 set -e -u -x
 source ./tasks/helpers.sh
 
-crane_version="0.18.0"
-crane_hash="cdf4d426d965d9a8ba613d7ebf3addf93101aa2e853a3f08fbfdaed2823918f3"
+crane_version="0.20.3"
+crane_hash="36c67a932f489b3f2724b64af90b599a8ef2aa7b004872597373c0ad694dc059"
 
 download_arch="$TARGETARCH"
 if [ "$TARGETARCH" == "amd64" ]; then
   download_arch="x86_64"
 elif [ "$TARGETARCH" == "arm64" ]; then
-  crane_hash="3e81dee96fb20f8ffaa150c1136abc39c376c7183843a5e0a6164b9623613c56"
+  crane_hash="d2235f7779cd39c6e40f43701d2512c997409f629fb53e621ede0d57d3f995e2"
 fi
 
 task_working_dir
