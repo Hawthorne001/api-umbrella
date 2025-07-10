@@ -38,7 +38,7 @@ gem "oj", "~> 3.10"
 gem "activerecord", "~> 7.1.1", :require => "active_record"
 gem "pg", "~> 1.5.3"
 gem "elasticsearch", "~> 7.13.3"
-gem "active_attr", "~> 0.16.0"
+gem "active_attr", "~> 0.17.0"
 
 # Factories for test database data
 gem "factory_bot", "~> 6.4.0"
@@ -50,8 +50,8 @@ gem "rails_compatible_cookies_utils", "~> 0.1.0"
 gem "addressable", "~> 2.8.0"
 
 # Browser/JavaScript integration tests
-gem "capybara", "~> 3.32"
-gem "selenium-webdriver", "~> 4.15"
+gem "capybara", "~> 3.40", ">= 3.40.0"
+gem "selenium-webdriver", "~> 4.17", ">= 4.17.0"
 
 # Take screenshots on capybara test failures
 gem "capybara-screenshot", "~> 1.0.22"
