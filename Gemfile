@@ -3,7 +3,7 @@ source "https://rubygems.org"
 ruby "~> 3.1"
 
 # Task runner
-gem "thor", "~> 1.3.0"
+gem "thor", "~> 1.4.0"
 
 # Tests
 gem "minitest", "~> 5.25.1"
