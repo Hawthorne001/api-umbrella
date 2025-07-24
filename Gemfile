@@ -3,7 +3,7 @@ source "https://rubygems.org"
 ruby "~> 3.1"
 
 # Task runner
-gem "thor", "~> 1.3.0"
+gem "thor", "~> 1.4.0"
 
 # Tests
 gem "minitest", "~> 5.25.1"
@@ -64,7 +64,7 @@ gem "capybara-screenshot", "~> 1.0.22"
 gem "capybara-shadowdom", "~> 0.3.0"
 
 # HTML or XML parsing
-gem "nokogiri", "~> 1.18"
+gem "nokogiri", "~> 1.18", ">= 1.18.9"
 
 # Useful additions
 gem "activesupport", "~> 7.2.2"
