@@ -55,7 +55,7 @@ gem "addressable", "~> 2.8.0"
 
 # Browser/JavaScript integration tests
 gem "capybara", "~> 3.32"
-gem "selenium-webdriver", "~> 4.15"
+gem "selenium-webdriver", "~> 4.33", ">= 4.33.0"
 
 # Take screenshots on capybara test failures
 gem "capybara-screenshot", "~> 1.0.22"
