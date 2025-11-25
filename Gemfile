@@ -42,7 +42,7 @@ gem "activerecord", "~> 7.2.2", :require => "active_record"
 gem "pg", "~> 1.5.3"
 gem "opensearch-ruby", "~> 3.4.0"
 gem "faraday-typhoeus", "~> 1.1.0"
-gem "active_attr", "~> 0.17.0"
+gem "active_attr", "~> 0.17.2"
 
 # Factories for test database data
 gem "factory_bot", "~> 6.5.0"
