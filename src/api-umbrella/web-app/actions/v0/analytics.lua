@@ -15,6 +15,8 @@ local stable_object_hash = require "api-umbrella.utils.stable_object_hash"
 local t = require("api-umbrella.web-app.utils.gettext").gettext
 local time = require "api-umbrella.utils.time"
 
+local db_statement_timeout_ms = config["web"]["analytics_v0_summary_db_timeout"] * 1000
+
 local _M = {}
 
 local function generate_organization_summary(start_time, end_time, recent_start_time, filters)
@@ -38,7 +40,7 @@ local function generate_organization_summary(start_time, end_time, recent_start_
   if config["web"]["analytics_v0_summary_filter"] then
     search:set_search_query_string(config["web"]["analytics_v0_summary_filter"])
   end
-  search:set_timeout(20 * 60) -- 20 minutes
+  search:set_timeout(config["web"]["analytics_v0_summary_analytics_timeout"])
   search:set_permission_scope(filters)
 
   local aggregate_sql = [[
@@ -97,7 +99,7 @@ local function generate_organization_summary(start_time, end_time, recent_start_
     date_key_length = 7,
   }, {
     fatal = true,
-    statement_timeout = 5 * 60 * 1000, -- 5 minutes
+    statement_timeout = db_statement_timeout_ms,
   })[1]["response"]
 
   search:set_start_time(recent_start_time)
@@ -112,7 +114,7 @@ local function generate_organization_summary(start_time, end_time, recent_start_
     date_key_length = 10,
   }, {
     fatal = true,
-    statement_timeout = 5 * 60 * 1000, -- 5 minutes
+    statement_timeout = db_statement_timeout_ms,
   })[1]["response"]
 
   response["hits"]["recent"] = recent_response["hits"]
@@ -139,7 +141,7 @@ local function generate_production_apis_summary(start_time, end_time, recent_sta
     WHERE api_backends.status_description = 'Production'
   ]], nil, {
     fatal = true,
-    statement_timeout = 5 * 60 * 1000, -- 5 minutes
+    statement_timeout = db_statement_timeout_ms,
   })
   data["organization_count"] = int64_to_json_number(counts[1]["organization_count"])
   data["api_backend_count"] = int64_to_json_number(counts[1]["api_backend_count"])
@@ -162,7 +164,7 @@ local function generate_production_apis_summary(start_time, end_time, recent_sta
     ORDER BY api_backends.organization_name
   ]], nil, {
     fatal = true,
-    statement_timeout = 5 * 60 * 1000, -- 5 minutes
+    statement_timeout = db_statement_timeout_ms,
   })
   for _, organization in ipairs(organizations) do
     local filters = {
@@ -247,7 +249,7 @@ local function generate_summary()
 
   local cache_id = "analytics_summary"
   local response_json = json_encode(response)
-  local expires_at = ngx.now() + 60 * 60 * 24 * 2 -- 2 days
+  local expires_at = nil -- Never expire
   Cache:upsert(cache_id, response_json, expires_at)
 
   return response_json

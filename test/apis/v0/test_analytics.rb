@@ -504,7 +504,8 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
     cache = Cache.find_by!(:id => "analytics_summary")
     assert_equal("analytics_summary", cache.id)
     assert_in_delta(Time.now.to_i, cache.created_at.to_i, 10)
-    assert_in_delta(Time.now.to_i + (60 * 60 * 24 * 2), cache.expires_at.to_i, 10)
+    assert_in_delta(Time.now.to_i, cache.updated_at.to_i, 10)
+    assert_nil(cache.expires_at)
     assert(cache.data)
     data = MultiJson.load(cache.data)
     assert_equal([

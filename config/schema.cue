@@ -380,6 +380,8 @@ import "path"
     analytics_v0_summary_start_time: string | *"2013-07-01T00:00:00.000Z"
     analytics_v0_summary_end_time?: string
     analytics_v0_summary_filter?: string
+    analytics_v0_summary_db_timeout: uint | *900 // 15 minutes
+    analytics_v0_summary_analytics_timeout: uint | *2400 // 40 minutes
     max_body_size: string | *"1m"
     allowed_signup_embed_urls_regex?: string
     default_host?: string
