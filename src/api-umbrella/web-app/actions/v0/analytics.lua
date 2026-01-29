@@ -141,6 +141,14 @@ local function generate_organization_summary(organization_name, start_time, end_
   response["active_api_keys"]["recent"] = recent_response["active_api_keys"]
   response["average_response_times"]["recent"] = recent_response["average_response_times"]
 
+  local last_month = response["hits"]["monthly"][#response["hits"]["monthly"]]
+  local expected_last_month = string.sub(end_time, 1, 7)
+  local last_day = response["hits"]["recent"]["daily"][#response["hits"]["recent"]["daily"]]
+  local expected_last_day = string.sub(end_time, 1, 10)
+  if last_month[1] ~= expected_last_month or last_day[1] ~= expected_last_day then
+    return nil, "incomplete data"
+  end
+
   local response_json = json_encode(response)
   expires_at = ngx.now() + 60 * 60 * 24 * 2 -- 2 days
   Cache:upsert(cache_id, response_json, expires_at)
@@ -149,6 +157,8 @@ local function generate_organization_summary(organization_name, start_time, end_
 end
 
 local function generate_production_apis_summary(start_time, end_time, recent_start_time)
+  local any_err = false
+
   local data = {
     organizations = {},
   }
@@ -212,18 +222,32 @@ local function generate_production_apis_summary(start_time, end_time, recent_sta
     end
 
     ngx.log(ngx.NOTICE, 'Fetching analytics for organization "' .. organization["organization_name"] .. '"')
-    local organization_data = generate_organization_summary(organization["organization_name"], start_time, end_time, recent_start_time, filters)
-    organization_data["name"] = organization["organization_name"]
-    organization_data["api_backend_count"] = int64_to_json_number(organization["api_backend_count"])
-    organization_data["api_backend_url_match_count"] = int64_to_json_number(organization["api_backend_url_match_count"])
-    table.insert(data["organizations"], organization_data)
+    local organization_data, organization_data_err = generate_organization_summary(organization["organization_name"], start_time, end_time, recent_start_time, filters)
+    if organization_data_err then
+      ngx.log(ngx.ERR, 'Analytics for organization "' .. organization["organization_name"] .. '" failed: ', organization_data_err)
+      any_err = true
+    else
+      organization_data["name"] = organization["organization_name"]
+      organization_data["api_backend_count"] = int64_to_json_number(organization["api_backend_count"])
+      organization_data["api_backend_url_match_count"] = int64_to_json_number(organization["api_backend_url_match_count"])
+      table.insert(data["organizations"], organization_data)
+    end
   end
 
   ngx.log(ngx.NOTICE, "Fetching analytics for all organizations")
-  local all_data = generate_organization_summary("all", start_time, end_time, recent_start_time, all_filters)
-  data["all"] = all_data
+  local all_data, all_data_err = generate_organization_summary("all", start_time, end_time, recent_start_time, all_filters)
+  if all_data_err then
+    ngx.log(ngx.ERR, "Analytics for all organization failed: ", all_data_err)
+    any_err = true
+  else
+    data["all"] = all_data
+  end
 
-  return data
+  if any_err then
+    return nil, "incomplete data"
+  else
+    return data
+  end
 end
 
 local function generate_summary()
@@ -258,21 +282,24 @@ local function generate_summary()
   date_tz:set(icu_date.fields.MILLISECOND, 0)
   local recent_start_time = date_tz:format(format_iso8601)
 
-  local response = {
-    production_apis = generate_production_apis_summary(start_time, end_time, recent_start_time),
-    start_time = time.timestamp_ms_to_iso8601(start_time_ms),
-    end_time = time.timestamp_ms_to_iso8601(end_time_ms),
-    timezone = date_tz:get_time_zone_id(),
-  }
+  local production_apis, production_apis_err = generate_production_apis_summary(start_time, end_time, recent_start_time)
+  if production_apis_err then
+    ngx.log(ngx.ERR, "Production APIs summary error: ", production_apis_err)
+  else
+    local response = {
+      production_apis = production_apis,
+      start_time = time.timestamp_ms_to_iso8601(start_time_ms),
+      end_time = time.timestamp_ms_to_iso8601(end_time_ms),
+      timezone = date_tz:get_time_zone_id(),
+    }
 
-  response["cached_at"] = time.timestamp_to_iso8601(ngx.now())
+    response["cached_at"] = time.timestamp_to_iso8601(ngx.now())
 
-  local cache_id = "analytics_summary"
-  local response_json = json_encode(response)
-  local expires_at = nil -- Never expire
-  Cache:upsert(cache_id, response_json, expires_at)
-
-  return response_json
+    local cache_id = "analytics_summary"
+    local response_json = json_encode(response)
+    local expires_at = nil -- Never expire
+    Cache:upsert(cache_id, response_json, expires_at)
+  end
 end
 
 function _M.summary(self)
