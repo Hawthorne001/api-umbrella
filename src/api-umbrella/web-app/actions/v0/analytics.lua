@@ -19,8 +19,13 @@ local db_statement_timeout_ms = config["web"]["analytics_v0_summary_db_timeout"]
 
 local _M = {}
 
-local function generate_organization_summary(start_time, end_time, recent_start_time, filters)
-  local cache_id = "analytics_summary:organization:" .. start_time .. ":" .. end_time .. ":" .. recent_start_time .. ":" .. stable_object_hash(filters)
+local function generate_organization_summary(organization_name, start_time, end_time, recent_start_time, filters)
+  local cache_id = "analytics_summary:organization:" .. organization_name .. ":" .. start_time .. ":" .. end_time .. ":" .. recent_start_time .. ":" .. stable_object_hash({
+    filters = filters,
+    timezone = config["analytics"]["timezone"],
+    max_buckets = config["opensearch"]["max_buckets"],
+    analytics_v0_summary_filter = config["web"]["analytics_v0_summary_filter"],
+  })
   local cache = Cache:find(cache_id)
   if cache then
     ngx.log(ngx.NOTICE, "Using cached analytics response for " .. cache_id)
@@ -44,6 +49,30 @@ local function generate_organization_summary(start_time, end_time, recent_start_
   search:set_permission_scope(filters)
 
   local aggregate_sql = [[
+    WITH interval_totals AS (
+      SELECT
+        interval_date,
+        hit_count,
+        response_time_average,
+        unique_user_ids
+      FROM (
+        SELECT
+          substring(data_date from 1 for :date_key_length) AS interval_date,
+          SUM(hit_count) AS hit_count,
+          array_agg(DISTINCT user_ids.user_id) FILTER (WHERE user_ids.user_id IS NOT NULL) AS unique_user_ids,
+          SUM(response_time_average) AS response_time_average
+        FROM analytics_cache
+        LEFT JOIN LATERAL unnest(unique_user_ids) AS user_ids(user_id) ON true
+        WHERE id IN :ids
+        GROUP BY interval_date
+        ORDER BY interval_date
+      ) AS interval_agg
+    ),
+    all_unique_users AS (
+      SELECT COUNT(DISTINCT user_ids.user_id) FILTER (WHERE user_ids.user_id IS NOT NULL) AS total_unique_users
+      FROM interval_totals
+      LEFT JOIN LATERAL unnest(interval_totals.unique_user_ids) AS user_ids(user_id) ON true
+    )
     SELECT jsonb_build_object(
       'hits', jsonb_build_object(
         :interval_name, jsonb_agg(jsonb_build_array(interval_totals.interval_date, COALESCE(interval_totals.hit_count, 0))),
@@ -51,39 +80,14 @@ local function generate_organization_summary(start_time, end_time, recent_start_
       ),
       'active_api_keys', jsonb_build_object(
         :interval_name, jsonb_agg(jsonb_build_array(interval_totals.interval_date, COALESCE(array_length(interval_totals.unique_user_ids, 1), 0))),
-        'total', (
-          SELECT COUNT(DISTINCT user_ids.id)
-          FROM unnest(array_accum(interval_totals.unique_user_ids)) AS user_ids(id)
-        )
+        'total', (SELECT total_unique_users FROM all_unique_users)
       ),
       'average_response_times', jsonb_build_object(
         :interval_name, jsonb_agg(jsonb_build_array(interval_totals.interval_date, interval_totals.response_time_average)),
         'average', ROUND(SUM(CASE WHEN interval_totals.response_time_average IS NOT NULL AND interval_totals.hit_count IS NOT NULL THEN interval_totals.response_time_average * interval_totals.hit_count END) / SUM(CASE WHEN interval_totals.response_time_average IS NOT NULL AND interval_totals.hit_count IS NOT NULL THEN interval_totals.hit_count END))
       )
     ) AS response
-    FROM (
-      SELECT
-        interval_date,
-        hit_count,
-        response_time_average,
-        (
-          SELECT array_agg(DISTINCT user_id)
-          FROM unnest(interval_agg.user_ids) AS user_id
-            LEFT JOIN api_users ON user_id = api_users.id
-          WHERE user_id IS NOT NULL AND api_users.disabled_at IS NULL
-        ) AS unique_user_ids
-      FROM (
-        SELECT
-          substring(data->'aggregations'->'hits_over_time'->'buckets'->0->>'key_as_string' from 1 for :date_key_length) AS interval_date,
-          SUM((data->'aggregations'->'hits_over_time'->'buckets'->0->>'doc_count')::bigint) AS hit_count,
-          array_accum(unique_user_ids) AS user_ids,
-          SUM(ROUND((data->'aggregations'->'response_time_average'->>'value')::numeric)) AS response_time_average
-        FROM analytics_cache
-        WHERE id IN :ids
-        GROUP BY interval_date
-        ORDER BY interval_date
-      ) AS interval_agg
-    ) AS interval_totals
+    FROM interval_totals
   ]]
 
   -- Expire the monthly data in 3 months. While the historical data shouldn't
@@ -192,7 +196,7 @@ local function generate_production_apis_summary(start_time, end_time, recent_sta
     end
 
     ngx.log(ngx.NOTICE, 'Fetching analytics for organization "' .. organization["organization_name"] .. '"')
-    local organization_data = generate_organization_summary(start_time, end_time, recent_start_time, filters)
+    local organization_data = generate_organization_summary(organization["organization_name"], start_time, end_time, recent_start_time, filters)
     organization_data["name"] = organization["organization_name"]
     organization_data["api_backend_count"] = int64_to_json_number(organization["api_backend_count"])
     organization_data["api_backend_url_match_count"] = int64_to_json_number(organization["api_backend_url_match_count"])
@@ -200,7 +204,7 @@ local function generate_production_apis_summary(start_time, end_time, recent_sta
   end
 
   ngx.log(ngx.NOTICE, "Fetching analytics for all organizations")
-  local all_data = generate_organization_summary(start_time, end_time, recent_start_time, all_filters)
+  local all_data = generate_organization_summary("all", start_time, end_time, recent_start_time, all_filters)
   data["all"] = all_data
 
   return data

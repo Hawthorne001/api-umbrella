@@ -765,6 +765,9 @@ CREATE TABLE api_umbrella.analytics_cache (
     created_at timestamp with time zone DEFAULT transaction_timestamp() NOT NULL,
     updated_at timestamp with time zone DEFAULT transaction_timestamp() NOT NULL,
     unique_user_ids uuid[],
+    data_date character varying GENERATED ALWAYS AS (((((((data -> 'aggregations'::text) -> 'hits_over_time'::text) -> 'buckets'::text) -> 0) ->> 'key_as_string'::text))::character varying) STORED,
+    hit_count bigint GENERATED ALWAYS AS (((((((data -> 'aggregations'::text) -> 'hits_over_time'::text) -> 'buckets'::text) -> 0) ->> 'doc_count'::text))::bigint) STORED,
+    response_time_average bigint GENERATED ALWAYS AS (round(((((data -> 'aggregations'::text) -> 'response_time_average'::text) ->> 'value'::text))::numeric)) STORED,
     CONSTRAINT analytics_cache_enforce_single_date_bucket CHECK ((NOT (jsonb_array_length((((data -> 'aggregations'::text) -> 'hits_over_time'::text) -> 'buckets'::text)) > 1)))
 );
 
@@ -2801,6 +2804,7 @@ ALTER TABLE ONLY api_umbrella.rate_limits
 -- PostgreSQL database dump complete
 --
 
+
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1498350289');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1554823736');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1560722058');
@@ -2820,3 +2824,4 @@ INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1701483732');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1721347955');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1738353016');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1753472899');
+INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1769633747');

@@ -1551,4 +1551,20 @@ return {
     db.query(grants_sql)
     db.query("COMMIT")
   end,
+
+  [1769633747] = function()
+    db.query("BEGIN")
+
+    -- Add an extra column to store the unique user IDs in a fashion more
+    -- optimized for querying. But since this strategy only works if each row
+    -- represents a single date bucket, add extra constraints to ensure we
+    -- don't accidentally mess up this assumption in the future.
+    db.query("ALTER TABLE analytics_cache ADD COLUMN data_date varchar GENERATED ALWAYS AS ((data->'aggregations'->'hits_over_time'->'buckets'->0->>'key_as_string')::varchar) STORED")
+    db.query("ALTER TABLE analytics_cache ADD COLUMN hit_count bigint GENERATED ALWAYS AS ((data->'aggregations'->'hits_over_time'->'buckets'->0->>'doc_count')::bigint) STORED")
+    db.query("ALTER TABLE analytics_cache ADD COLUMN response_time_average bigint GENERATED ALWAYS AS (round((data->'aggregations'->'response_time_average'->>'value')::numeric)) STORED")
+
+    db.query(grants_sql)
+    db.query("COMMIT")
+  end,
+
 }
