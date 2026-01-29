@@ -49,24 +49,40 @@ local function generate_organization_summary(organization_name, start_time, end_
   search:set_permission_scope(filters)
 
   local aggregate_sql = [[
-    WITH interval_totals AS (
+    WITH interval_rows AS (
+      SELECT
+        substring(data_date from 1 for :date_key_length) AS interval_date,
+        hit_count,
+        unique_user_ids,
+        response_time_average
+      FROM analytics_cache
+      WHERE id IN :ids
+    ),
+    interval_unique_user_ids AS (
       SELECT
         interval_date,
-        hit_count,
-        response_time_average,
-        unique_user_ids
-      FROM (
-        SELECT
-          substring(data_date from 1 for :date_key_length) AS interval_date,
-          SUM(hit_count) AS hit_count,
-          array_agg(DISTINCT user_ids.user_id) FILTER (WHERE user_ids.user_id IS NOT NULL) AS unique_user_ids,
-          SUM(response_time_average) AS response_time_average
-        FROM analytics_cache
-        LEFT JOIN LATERAL unnest(unique_user_ids) AS user_ids(user_id) ON true
-        WHERE id IN :ids
-        GROUP BY interval_date
-        ORDER BY interval_date
-      ) AS interval_agg
+        array_agg(DISTINCT user_ids.user_id) FILTER (WHERE user_ids.user_id IS NOT NULL) AS unique_user_ids
+      FROM interval_rows
+      CROSS JOIN LATERAL unnest(unique_user_ids) AS user_ids(user_id)
+      GROUP BY interval_date
+    ),
+    interval_counts AS (
+      SELECT
+        interval_date,
+        SUM(hit_count) AS hit_count,
+        SUM(response_time_average) AS response_time_average
+      FROM interval_rows
+      GROUP BY interval_date
+    ),
+    interval_totals AS (
+      SELECT
+        interval_counts.interval_date,
+        interval_counts.hit_count,
+        interval_unique_user_ids.unique_user_ids,
+        interval_counts.response_time_average
+      FROM interval_counts
+      NATURAL LEFT JOIN interval_unique_user_ids
+      ORDER BY interval_date
     ),
     all_unique_users AS (
       SELECT COUNT(DISTINCT user_ids.user_id) FILTER (WHERE user_ids.user_id IS NOT NULL) AS total_unique_users

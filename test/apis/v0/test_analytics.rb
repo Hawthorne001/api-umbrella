@@ -56,12 +56,14 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
       start_time = Time.zone.parse($config["web"]["analytics_v0_summary_start_time"])
       end_time = Time.zone.parse($config["web"]["analytics_v0_summary_end_time"])
     end
-    FactoryBot.create_list(:api_user, 3, :created_at => start_time)
+    users = FactoryBot.create_list(:api_user, 3, :created_at => start_time)
     FactoryBot.create_list(:log_item, 1, :request_at => start_time, :response_time => 100, :request_host => backend1.frontend_host, :request_path => backend1.url_matches[0].frontend_prefix)
     FactoryBot.create_list(:log_item, 1, :request_at => start_time, :response_time => 100, :request_host => backend2.frontend_host, :request_path => backend2.url_matches[0].frontend_prefix)
     FactoryBot.create_list(:log_item, 1, :request_at => start_time, :response_time => 100, :request_host => backend3.frontend_host, :request_path => backend3.url_matches[0].frontend_prefix)
     FactoryBot.create_list(:log_item, 1, :request_at => start_time, :response_time => 100, :request_host => backend4.frontend_host, :request_path => backend4.url_matches[0].frontend_prefix)
     FactoryBot.create_list(:log_item, 1, :request_at => end_time, :response_time => 200, :request_host => backend1.frontend_host, :request_path => backend1.url_matches[0].frontend_prefix)
+    FactoryBot.create_list(:log_item, 1, :request_at => end_time, :response_time => 100, :request_host => backend3.frontend_host, :request_path => backend3.url_matches[0].frontend_prefix, :user_id => users.first.id)
+    FactoryBot.create_list(:log_item, 2, :request_at => end_time, :response_time => 1000, :request_host => backend3.frontend_host, :request_path => backend3.url_matches[0].frontend_prefix, :user_id => users.last.id)
     LogItem.refresh_indices!
 
     response = make_request
@@ -80,7 +82,7 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
     assert_match_iso8601(data.fetch("end_time"))
     assert_kind_of(Hash, data.fetch("production_apis"))
     assert_match_iso8601(data.fetch("start_time"))
-    assert_equal("2013-07-01T06:00:00Z", data.fetch("start_time"))
+    assert_equal("2013-06-01T06:00:00Z", data.fetch("start_time"))
     assert_equal("America/Denver", data.fetch("timezone"))
 
     assert_equal({
@@ -88,11 +90,12 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
         {
           "active_api_keys" => {
             "monthly" => [
-              ["2013-07", 1],
-              ["2013-08", 0],
+              ["2013-06", 1],
+              ["2013-07", 0],
+              ["2013-08", 2],
             ],
             "recent" => {
-              "total" => 0,
+              "total" => 2,
               "daily" => [
                 ["2013-08-02", 0],
                 ["2013-08-03", 0],
@@ -123,19 +126,20 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
                 ["2013-08-28", 0],
                 ["2013-08-29", 0],
                 ["2013-08-30", 0],
-                ["2013-08-31", 0],
+                ["2013-08-31", 2],
               ],
             },
-            "total" => 1,
+            "total" => 3,
           },
           "average_response_times" => {
-            "average" => 100,
+            "average" => 550,
             "monthly" => [
-              ["2013-07", 100],
-              ["2013-08", nil],
+              ["2013-06", 100],
+              ["2013-07", nil],
+              ["2013-08", 700],
             ],
             "recent" => {
-              "average" => nil,
+              "average" => 700,
               "daily" => [
                 ["2013-08-02", nil],
                 ["2013-08-03", nil],
@@ -166,7 +170,7 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
                 ["2013-08-28", nil],
                 ["2013-08-29", nil],
                 ["2013-08-30", nil],
-                ["2013-08-31", nil],
+                ["2013-08-31", 700],
               ],
             },
           },
@@ -175,11 +179,12 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
           "api_backend_count" => 1,
           "hits" => {
             "monthly" => [
-              ["2013-07", 1],
-              ["2013-08", 0],
+              ["2013-06", 1],
+              ["2013-07", 0],
+              ["2013-08", 3],
             ],
             "recent" => {
-              "total" => 0,
+              "total" => 3,
               "daily" => [
                 ["2013-08-02", 0],
                 ["2013-08-03", 0],
@@ -210,16 +215,17 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
                 ["2013-08-28", 0],
                 ["2013-08-29", 0],
                 ["2013-08-30", 0],
-                ["2013-08-31", 0],
+                ["2013-08-31", 3],
               ],
             },
-            "total" => 1,
+            "total" => 4,
           },
         },
         {
           "active_api_keys" => {
             "monthly" => [
-              ["2013-07", 1],
+              ["2013-06", 1],
+              ["2013-07", 0],
               ["2013-08", 1],
             ],
             "recent" => {
@@ -262,7 +268,8 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
           "average_response_times" => {
             "average" => 133,
             "monthly" => [
-              ["2013-07", 100],
+              ["2013-06", 100],
+              ["2013-07", nil],
               ["2013-08", 200],
             ],
             "recent" => {
@@ -306,7 +313,8 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
           "api_backend_count" => 2,
           "hits" => {
             "monthly" => [
-              ["2013-07", 2],
+              ["2013-06", 2],
+              ["2013-07", 0],
               ["2013-08", 1],
             ],
             "recent" => {
@@ -351,11 +359,12 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
       "all" => {
         "active_api_keys" => {
           "monthly" => [
-            ["2013-07", 1],
-            ["2013-08", 1],
+            ["2013-06", 1],
+            ["2013-07", 0],
+            ["2013-08", 3],
           ],
           "recent" => {
-            "total" => 1,
+            "total" => 3,
             "daily" => [
               ["2013-08-02", 0],
               ["2013-08-03", 0],
@@ -386,19 +395,20 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
               ["2013-08-28", 0],
               ["2013-08-29", 0],
               ["2013-08-30", 0],
-              ["2013-08-31", 1],
+              ["2013-08-31", 3],
             ],
           },
-          "total" => 1,
+          "total" => 3,
         },
         "average_response_times" => {
-          "average" => 125,
+          "average" => 371,
           "monthly" => [
-            ["2013-07", 100],
-            ["2013-08", 200],
+            ["2013-06", 100],
+            ["2013-07", nil],
+            ["2013-08", 575],
           ],
           "recent" => {
-            "average" => 200,
+            "average" => 575,
             "daily" => [
               ["2013-08-02", nil],
               ["2013-08-03", nil],
@@ -429,17 +439,18 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
               ["2013-08-28", nil],
               ["2013-08-29", nil],
               ["2013-08-30", nil],
-              ["2013-08-31", 200],
+              ["2013-08-31", 575],
             ],
           },
         },
         "hits" => {
           "monthly" => [
-            ["2013-07", 3],
-            ["2013-08", 1],
+            ["2013-06", 3],
+            ["2013-07", 0],
+            ["2013-08", 4],
           ],
           "recent" => {
-            "total" => 1,
+            "total" => 4,
             "daily" => [
               ["2013-08-02", 0],
               ["2013-08-03", 0],
@@ -470,10 +481,10 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
               ["2013-08-28", 0],
               ["2013-08-29", 0],
               ["2013-08-30", 0],
-              ["2013-08-31", 1],
+              ["2013-08-31", 4],
             ],
           },
-          "total" => 4,
+          "total" => 7,
         },
       },
       "api_backend_count" => 3,
