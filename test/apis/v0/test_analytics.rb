@@ -53,7 +53,7 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
   end
 
   def test_expected_response
-    # LogItem.clean_indices!
+    LogItem.clean_indices!
 
     backend1 = FactoryBot.create(:api_backend, :frontend_host => "localhost1")
     backend2 = FactoryBot.create(:api_backend, :frontend_host => "localhost2")
@@ -665,6 +665,35 @@ class Test::Apis::V0::TestAnalytics < Minitest::Test
       "start_time",
       "timezone",
     ].sort, data.keys.sort)
+  end
+
+  def test_unique_users_over_bucket_size_limit
+    LogItem.clean_indices!
+
+    override_config({
+      opensearch: {
+        max_buckets: 10,
+      },
+    }) do
+      FactoryBot.create_list(:log_item, 3, request_at: @start_time, user_id: SecureRandom.uuid)
+      15.times do
+        FactoryBot.create(:log_item, request_at: @start_time, user_id: SecureRandom.uuid)
+      end
+      LogItem.refresh_indices!
+
+      response = make_request
+      assert_response_code(200, response)
+      assert_equal("MISS", response.headers["X-Cache"])
+
+      data = MultiJson.load(response.body)
+      assert_equal(18, data.fetch("production_apis").fetch("all").fetch("hits").fetch("total"))
+      assert_equal("2013-06", data.fetch("production_apis").fetch("all").fetch("hits").fetch("monthly")[0][0])
+      assert_equal(18, data.fetch("production_apis").fetch("all").fetch("hits").fetch("monthly")[0][1])
+
+      assert_equal(16, data.fetch("production_apis").fetch("all").fetch("active_api_keys").fetch("total"))
+      assert_equal("2013-06", data.fetch("production_apis").fetch("all").fetch("active_api_keys").fetch("monthly")[0][0])
+      assert_equal(16, data.fetch("production_apis").fetch("all").fetch("active_api_keys").fetch("monthly")[0][1])
+    end
   end
 
   private
