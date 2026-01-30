@@ -7,7 +7,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: nrel/api-umbrella
+  IMAGE_NAME: natlabrockies/api-umbrella
   DOCKER_BUILDKIT: 1
 
 jobs:
