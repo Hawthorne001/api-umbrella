@@ -141,11 +141,16 @@ local function generate_organization_summary(organization_name, start_time, end_
   response["active_api_keys"]["recent"] = recent_response["active_api_keys"]
   response["average_response_times"]["recent"] = recent_response["average_response_times"]
 
+  -- Only cache the data if it includes the expected latest month of data, and
+  -- also includes all months/days expected. This prevents returning and
+  -- caching incomplete data due to the underlying analytics queries failing
+  -- for certain time periods and forces the data to wait until all of the
+  -- underlying data is cached before returning the overall summary data.
   local last_month = response["hits"]["monthly"][#response["hits"]["monthly"]]
   local expected_last_month = string.sub(end_time, 1, 7)
   local last_day = response["hits"]["recent"]["daily"][#response["hits"]["recent"]["daily"]]
   local expected_last_day = string.sub(end_time, 1, 10)
-  if last_month[1] ~= expected_last_month or last_day[1] ~= expected_last_day then
+  if last_month[1] ~= expected_last_month or last_day[1] ~= expected_last_day or #analytics_cache_ids ~= #response["hits"]["monthly"] or #recent_analytics_cache_ids ~= #response["hits"]["recent"]["daily"] then
     return nil, "incomplete data"
   end
 
