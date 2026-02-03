@@ -305,4 +305,26 @@ class Test::AdminUi::TestStatsLogs < Minitest::Capybara::Test
       "is not null",
     ]
   end
+
+  def test_table_displays_time_in_eastern_timezone
+    FactoryBot.create(:log_item, :request_at => Time.parse("2015-01-16T06:06:28.816Z").utc, :request_method => "OPTIONS")
+    LogItem.refresh_indices!
+
+    admin_login
+    visit "/admin/#/stats/logs?search=&start_at=2015-01-12&end_at=2015-01-18&interval=day"
+    refute_selector(".busy-blocker")
+
+    assert_text("2015-01-16 01:06:28 EST")
+  end
+
+  def test_table_displays_time_in_eastern_timezone_during_dst
+    FactoryBot.create(:log_item, :request_at => Time.parse("2015-07-16T06:06:28.816Z").utc, :request_method => "OPTIONS")
+    LogItem.refresh_indices!
+
+    admin_login
+    visit "/admin/#/stats/logs?search=&start_at=2015-07-12&end_at=2015-07-18&interval=day"
+    refute_selector(".busy-blocker")
+
+    assert_text("2015-07-16 02:06:28 EDT")
+  end
 end

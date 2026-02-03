@@ -83,7 +83,7 @@ export default {
 
   renderTime(value, type) {
     if(type === 'display' && value && value !== '-') {
-      return moment(value).format('YYYY-MM-DD HH:mm:ss');
+      return moment(value).tz('America/New_York').format('YYYY-MM-DD HH:mm:ss z');
     }
 
     return value;
