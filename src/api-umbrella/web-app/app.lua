@@ -160,6 +160,21 @@ local function current_admin_from_session(self)
 end
 
 local function before_filter(self)
+  -- Set session variables for the database connection (always use UTC and set
+  -- an app name for auditing).
+  local pg = db.connect()
+  -- I don't think this should really be possible, but if somehow lapis has
+  -- already established a connection, then `db.connect()` will return `nil`.
+  -- So in that case, fetch the cached connection Lapis uses internally, and
+  -- force the full setup (even if it's a reused socket), since we don't know
+  -- if this socket was fully setup by Lapis or not.
+  local force_first_time_setup = false
+  if not pg then
+    pg = ngx.ctx.pgmoon_default
+    force_first_time_setup = true
+  end
+  pg_utils.setup_connection(pg, "api-umbrella-web-app", force_first_time_setup)
+
   -- Refresh cache per request if background polling is disabled.
   if config["router"]["active_config"]["refresh_local_cache_interval"] == 0 then
     refresh_local_active_config_cache()
@@ -180,23 +195,6 @@ local function before_filter(self)
 
   self.res.headers["Cache-Control"] = "no-cache, max-age=0, must-revalidate, no-store"
   self.res.headers["Pragma"] = "no-cache"
-
-  -- Note that ngx.ctx.pgmoon will only be set after running the db.query, so
-  -- that's why we execute a dummy query once. If this issue gets addressed
-  -- there might be a better way to access the underlying pgmoon object from
-  -- Lapis: https://github.com/leafo/lapis/issues/565
-  db.query("SELECT 1")
-  pg_utils.setup_type_casting(ngx.ctx.pgmoon)
-
-  -- Set session variables for the database connection (always use UTC and set
-  -- an app name for auditing).
-  --
-  -- Ideally we would only set these once per connection (and not set it when
-  -- the socket is reused), but Lapi's "db" instance doesn't have a way to get
-  -- the underlying pgmoon connection before executing a query (the connection
-  -- is lazily established after the first query).
-  pg_utils.setup_socket_timeouts(ngx.ctx.pgmoon)
-  pg_utils.setup_session_vars(ngx.ctx.pgmoon, "api-umbrella-web-app")
 
   ngx.ctx.locale = http_headers.preferred_accept_language(ngx.var.http_accept_language, supported_languages)
   self.t = function(_, message)
