@@ -84,7 +84,7 @@ export default {
   renderTime(timezone) {
     return function(value, type) {
       if(type === 'display' && value && value !== '-') {
-        return moment(value).tz(timezone).format('YYYY-MM-DD HH:mm:ss z');
+        return moment(value).tz(timezone).format('YYYY-MM-DD LTS z');
       }
 
       return value;

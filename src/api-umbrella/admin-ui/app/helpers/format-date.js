@@ -7,7 +7,7 @@ export function formatDate(params) {
   let format = params[1];
 
   if(!format || !isString(format)) {
-    format = 'YYYY-MM-DD HH:mm Z';
+    format = 'YYYY-MM-DD LT Z';
   }
 
   if(date) {
