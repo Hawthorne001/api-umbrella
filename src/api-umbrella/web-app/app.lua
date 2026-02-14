@@ -1,7 +1,7 @@
 local Admin = require "api-umbrella.web-app.models.admin"
 local config = require("api-umbrella.utils.load_config")()
 local csrf = require "api-umbrella.web-app.utils.csrf"
-local db = require "lapis.db"
+local db_init = require "api-umbrella.web-app.utils.db_init"
 local error_messages_by_field = require "api-umbrella.web-app.utils.error_messages_by_field"
 local escape_html = require("lapis.html").escape
 local flash = require "api-umbrella.web-app.utils.flash"
@@ -10,7 +10,6 @@ local http_headers = require "api-umbrella.utils.http_headers"
 local is_empty = require "api-umbrella.utils.is_empty"
 local lapis = require "lapis"
 local lapis_config = require("lapis.config").get()
-local pg_utils = require "api-umbrella.utils.pg_utils"
 local refresh_local_active_config_cache = require("api-umbrella.web-app.stores.active_config_store").refresh_local_cache
 local resty_session = require "resty.session"
 local t = require("api-umbrella.web-app.utils.gettext").gettext
@@ -160,20 +159,7 @@ local function current_admin_from_session(self)
 end
 
 local function before_filter(self)
-  -- Set session variables for the database connection (always use UTC and set
-  -- an app name for auditing).
-  local pg = db.connect()
-  -- I don't think this should really be possible, but if somehow lapis has
-  -- already established a connection, then `db.connect()` will return `nil`.
-  -- So in that case, fetch the cached connection Lapis uses internally, and
-  -- force the full setup (even if it's a reused socket), since we don't know
-  -- if this socket was fully setup by Lapis or not.
-  local force_first_time_setup = false
-  if not pg then
-    pg = ngx.ctx.pgmoon_default
-    force_first_time_setup = true
-  end
-  pg_utils.setup_connection(pg, "api-umbrella-web-app", force_first_time_setup)
+  db_init()
 
   -- Refresh cache per request if background polling is disabled.
   if config["router"]["active_config"]["refresh_local_cache_interval"] == 0 then
