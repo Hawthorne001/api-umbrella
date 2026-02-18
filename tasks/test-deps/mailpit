@@ -3,10 +3,10 @@
 set -e -u -x
 source ./tasks/helpers.sh
 
-mailpit_version="1.29.0"
-mailpit_hash="80cb7a6cc0287dca5426ab250e60a037f53bbec0f7e1dc1413ab03460172c9ac"
+mailpit_version="1.29.1"
+mailpit_hash="e53c9f29c208877e9a8d27de7466ee4e325bf534727d080d5ef517f661d48907"
 if [ "$TARGETARCH" == "arm64" ]; then
-  mailpit_hash="1b3f4dc1e80942e0ab688077882e0403ce74b294c1f2b7a0f8ff5ce9f831c911"
+  mailpit_hash="c8b944b47512eb2324b1110c422083c45c62be38de4b35ba558f3b8447848b4d"
 fi
 
 task_working_dir
