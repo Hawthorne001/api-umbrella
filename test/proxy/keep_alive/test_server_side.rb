@@ -109,17 +109,7 @@ class Test::Proxy::KeepAlive::TestServerSide < Minitest::Test
     }) do
       # Open a bunch of concurrent connections to establish a connection pool.
       max_concurrency = 100
-      hydra = Typhoeus::Hydra.new(max_concurrency: max_concurrency)
-      requests = Array.new(300) do
-        request = Typhoeus::Request.new("http://127.0.0.1:9080/#{unique_test_class_id}/keepalive-default/delay/500", http_options)
-        hydra.queue(request)
-        request
-      end
-      hydra.run
-      assert_equal(300, requests.length)
-      requests.each do |req|
-        assert_response_code(200, req.response)
-      end
+      saturate_connections("/#{unique_test_class_id}/keepalive-default/delay/500", num_requests: 300, max_concurrency: max_concurrency)
 
       # Immediately after the requests, verify that Envoy has idle connections
       # to the API backend (the connection pool is populated).
@@ -140,11 +130,8 @@ class Test::Proxy::KeepAlive::TestServerSide < Minitest::Test
       timing = nil
       begin
         stats = nil
-        # This should generally happen within the configured timeout seconds,
-        # but we'll add a significant timeout since we sometimes see this take
-        # longer in CI (but the exact timing of this behavior isn't really
-        # that important).
-        Timeout.timeout(300) do
+        # This should generally happen within the configured timeout seconds.
+        Timeout.timeout(envoy_upstream_keepalive_connections_max_age * 3) do
           loop do
             stats = connection_stats
             elapsed_time = Time.now - begin_time
@@ -163,15 +150,20 @@ class Test::Proxy::KeepAlive::TestServerSide < Minitest::Test
         flunk("Envoy did not close connections after max connection age expired. Last connection stats: #{stats.inspect}")
       end
 
-      # Verify Envoy closed the connections and the API backend agrees.
+      # Verify Envoy closed the connections and the API backend agrees
+      # (although, note that nginx may still think there are some connections
+      # remaining open, but we're not trying to test that backend behavior
+      # here, so accept some discrepancies there).
       stats = connection_stats
       assert_equal(0, stats.fetch(:envoy_to_api_backend_active_connections_per_envoy))
       assert_operator(stats.fetch(:envoy_to_api_backend_active_connections_per_api_backend), :<=, max_concurrency_delta_buffer)
       assert_operator(stats.fetch(:envoy_to_api_backend_idle_connections_per_api_backend), :<=, max_concurrency_delta_buffer)
 
       # Verify that Envoy initiated the connection closures (destroy_local
-      # should have increased).
-      assert_operator(stats.fetch(:envoy_to_api_backend_destroy_local_connections_per_envoy), :>, baseline_destroy_local)
+      # should have increased to correspond to the number of max connections
+      # established).
+      num_destroyed = stats.fetch(:envoy_to_api_backend_destroy_local_connections_per_envoy) - baseline_destroy_local
+      assert_in_delta(max_concurrency, num_destroyed, max_concurrency_delta_buffer)
 
       # Check the timing of when connections were closed. This verifies that
       # the observed behavior corresponds with the configured max age setting.
@@ -179,16 +171,7 @@ class Test::Proxy::KeepAlive::TestServerSide < Minitest::Test
 
       # Make another batch of requests after the max age has expired to ensure
       # that new connections work successfully.
-      requests = Array.new(300) do
-        request = Typhoeus::Request.new("http://127.0.0.1:9080/#{unique_test_class_id}/keepalive-default/delay/500", http_options)
-        hydra.queue(request)
-        request
-      end
-      hydra.run
-      assert_equal(300, requests.length)
-      requests.each do |req|
-        assert_response_code(200, req.response)
-      end
+      saturate_connections("/#{unique_test_class_id}/keepalive-default/delay/500", num_requests: 300, max_concurrency: max_concurrency)
 
       # Verify new connections were established.
       stats = connection_stats
@@ -290,17 +273,7 @@ class Test::Proxy::KeepAlive::TestServerSide < Minitest::Test
     # Open a bunch of concurrent connections first, and then inspect the number
     # of number of connections still active afterwards.
     max_concurrency = 190
-    hydra = Typhoeus::Hydra.new(max_concurrency: max_concurrency)
-    requests = Array.new(500) do
-      request = Typhoeus::Request.new("http://127.0.0.1:9080#{path}", http_options)
-      hydra.queue(request)
-      request
-    end
-    hydra.run
-    assert_equal(500, requests.length)
-    requests.each do |req|
-      assert_response_code(200, req.response)
-    end
+    saturate_connections(path, num_requests: 500, max_concurrency: max_concurrency)
 
     # Immediately after opening all the connections, the server should have a
     # bunch of idle connections open, roughly corresponding to the maximum
@@ -321,16 +294,7 @@ class Test::Proxy::KeepAlive::TestServerSide < Minitest::Test
 
     # Make another batch of concurrent requests just to sanity check that the
     # existing idle connections get reused instead of being reestablished.
-    requests = Array.new(300) do
-      request = Typhoeus::Request.new("http://127.0.0.1:9080#{path}", http_options)
-      hydra.queue(request)
-      request
-    end
-    hydra.run
-    assert_equal(300, requests.length)
-    requests.each do |req|
-      assert_response_code(200, req.response)
-    end
+    saturate_connections(path, num_requests: 300, max_concurrency: max_concurrency)
 
     stats = connection_stats
     assert_in_delta(nginx_keepalive_count, stats.fetch(:nginx_router_to_trafficserver_active_connections_per_trafficserver), nginx_keepalive_count_delta_buffer)
@@ -423,16 +387,7 @@ class Test::Proxy::KeepAlive::TestServerSide < Minitest::Test
     # just to ensure that new connections work successfully and any stale
     # connections (like the API backend and Envoy having a different concept of
     # what connections are idle) work properly.
-    requests = Array.new(300) do
-      request = Typhoeus::Request.new("http://127.0.0.1:9080#{path}", http_options)
-      hydra.queue(request)
-      request
-    end
-    hydra.run
-    assert_equal(300, requests.length)
-    requests.each do |req|
-      assert_response_code(200, req.response)
-    end
+    saturate_connections(path, num_requests: 300, max_concurrency: max_concurrency)
 
     stats = connection_stats
     assert_in_delta(nginx_keepalive_count, stats.fetch(:nginx_router_to_trafficserver_active_connections_per_trafficserver), nginx_keepalive_count_delta_buffer)
@@ -483,5 +438,19 @@ class Test::Proxy::KeepAlive::TestServerSide < Minitest::Test
     stats[:envoy_to_api_backend_writing_connections_per_api_backend] = stats.fetch(:api_backend).fetch("connections_writing")
 
     stats
+  end
+
+  def saturate_connections(path, num_requests:, max_concurrency:)
+    hydra = Typhoeus::Hydra.new(max_concurrency: max_concurrency)
+    requests = Array.new(num_requests) do
+      request = Typhoeus::Request.new("http://127.0.0.1:9080#{path}", http_options)
+      hydra.queue(request)
+      request
+    end
+    hydra.run
+    assert_equal(num_requests, requests.length)
+    requests.each do |req|
+      assert_response_code(200, req.response)
+    end
   end
 end
