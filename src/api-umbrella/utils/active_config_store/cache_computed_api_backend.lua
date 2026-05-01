@@ -17,7 +17,7 @@ local function cache_scheduled_brownouts(config, api)
     local frontend_host_normalized = api["_frontend_host_normalized"]
     for _, host in ipairs(hosts) do
       local scheduled_brownouts = host["scheduled_brownouts"]
-      if scheduled_brownouts and (api["_frontend_host_normalized"] == host["_hostname_normalized"] or matches_hostname(frontend_host_normalized, host["_hostname_normalized"], host["_hostname_wildcard_regex"])) then
+      if scheduled_brownouts and (frontend_host_normalized == host["_hostname_normalized"] or matches_hostname(frontend_host_normalized, host["_hostname_normalized"], host["_hostname_wildcard_regex"])) then
         if api["_scheduled_brownouts"] == nil then
           api["_scheduled_brownouts"] = {}
         end
