@@ -1586,4 +1586,10 @@ return {
     db.query(grants_sql)
     db.query("COMMIT")
   end,
+
+  [1775265493] = function()
+    db.query("CREATE INDEX CONCURRENTLY api_users_email_created_at_idx ON api_umbrella.api_users USING btree (email, created_at ASC)")
+
+    db.query(grants_sql)
+  end,
 }

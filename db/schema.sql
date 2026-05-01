@@ -1982,6 +1982,13 @@ CREATE INDEX api_users_created_at_idx ON api_umbrella.api_users USING btree (cre
 
 
 --
+-- Name: api_users_email_created_at_idx; Type: INDEX; Schema: api_umbrella; Owner: -
+--
+
+CREATE INDEX api_users_email_created_at_idx ON api_umbrella.api_users USING btree (email, created_at);
+
+
+--
 -- Name: api_users_roles_api_user_id_api_role_id_idx; Type: INDEX; Schema: api_umbrella; Owner: -
 --
 
@@ -2826,3 +2833,4 @@ INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1738353016');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1753472899');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1769633747');
 INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1769732670');
+INSERT INTO api_umbrella.lapis_migrations (name) VALUES ('1775265493');
