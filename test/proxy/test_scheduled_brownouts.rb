@@ -190,7 +190,7 @@ class Test::Proxy::TestScheduledBrownouts < Minitest::Test
     assert_equal({
       "error" => {
         "code" => "SCHEDULED_BROWNOUT",
-        "message" => "This API will be going away. Seek an alternative API. Contact us at https://active-brownout-all-paths.test-proxy-testscheduledbrownouts-000001:9081/contact/ for assistance.",
+        "message" => "This API will be going away. Seek an alternative API. Contact us at https://active-brownout-all-paths.#{unique_test_class_hostname}:9081/contact/ for assistance.",
       },
     }, data)
   end
