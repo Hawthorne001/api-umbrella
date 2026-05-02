@@ -3,14 +3,14 @@
 set -e -u -x
 source ./tasks/helpers.sh
 
-glauth_version="2.4.0"
-glauth_hash="bb74391703486d9bea166b0add57993731526f8913f50483aa6a8da09c4108b4"
+glauth_version="2.5.0"
+glauth_hash="638847c3b4c38833cf8be9d6e07aea4e7c6f045138dffa666b496c957a72445e"
 if [ "$TARGETARCH" == "arm64" ]; then
-  glauth_hash="23bdea005819e75521df144a872b24eafcd14c47b7577cd54822f2da8b9a760e"
+  glauth_hash="a6c0509c0b9bb64b8ed076a64f0713986a882a0cc7fd0116790ee42a2a122a43"
 fi
 
 task_working_dir
-download "https://github.com/glauth/glauth/releases/download/v$glauth_version/glauth-linux-${TARGETARCH}" "sha256" "$glauth_hash"
+download "https://github.com/glauth/glauth/releases/download/GLAuth-v$glauth_version/glauth-linux-${TARGETARCH}" "sha256" "$glauth_hash"
 
 install -D -m 755 "_persist/downloads/glauth-linux-${TARGETARCH}" "$TEST_INSTALL_PREFIX/bin/glauth"
 
