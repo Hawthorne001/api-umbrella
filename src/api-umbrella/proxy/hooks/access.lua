@@ -17,6 +17,7 @@ local referer_validator = require "api-umbrella.proxy.middleware.referer_validat
 local resolve_api_key = require "api-umbrella.proxy.middleware.resolve_api_key"
 local rewrite_request = require "api-umbrella.proxy.middleware.rewrite_request"
 local role_validator = require "api-umbrella.proxy.middleware.role_validator"
+local scheduled_brownout = require "api-umbrella.proxy.middleware.scheduled_brownout"
 local user_settings = require "api-umbrella.proxy.middleware.user_settings"
 
 local err
@@ -28,6 +29,11 @@ local settings
 settings, err = api_settings(ngx_ctx, api)
 if err then
   return error_handler(ngx_ctx, err, settings)
+end
+
+err, err_data = scheduled_brownout(ngx_ctx, api)
+if err then
+  return error_handler(ngx_ctx, err, settings, err_data)
 end
 
 -- Find the API key set on the request.

@@ -565,6 +565,19 @@ import "path"
     ssl_cert?: string
     ssl_cert_key?: string
     rewrites?: [...string]
+
+    #scheduled_brownout: {
+      path_regex: string
+      message?: string
+      status_code?: uint
+
+      #schedule: {
+        start_time: string
+        end_time: string
+      }
+      schedule: [...#schedule]
+    }
+    scheduled_brownouts?: [...#scheduled_brownout]
   }
   hosts: [...#host] | *[]
 
@@ -691,6 +704,11 @@ import "path"
         code: "HTTPS_REQUIRED"
         message: "Requests must be made over HTTPS. Try accessing the API at: {{https_url}}"
       }
+      scheduled_brownout: {
+        status_code: 410
+        code: "SCHEDULED_BROWNOUT"
+        message: "This API will be going away. Seek an alternative API. Contact us at {{contact_url}} for assistance."
+      }
     }
   }
   default_api_backend_settings: #api_backend_settings | *_default_api_backend_settings_value
@@ -743,6 +761,7 @@ import "path"
       over_rate_limit?: {...}
       internal_server_error?: {...}
       https_required?: {...}
+      scheduled_brownout?: {...}
     }
   }
   #api_backend_sub_settings: {
