@@ -2,6 +2,7 @@ require_relative "../test_helper"
 
 class Test::Proxy::TestScheduledBrownouts < Minitest::Test
   include ApiUmbrellaTestHelpers::Setup
+  include ApiUmbrellaTestHelpers::Logging
   include Minitest::Hooks
 
   def setup
@@ -441,6 +442,17 @@ class Test::Proxy::TestScheduledBrownouts < Minitest::Test
       host: "foo.active-brownout-all-paths.#{unique_test_class_hostname}",
       expected_status_code: 404,
     )
+  end
+
+  def test_logs_brownout_requests
+    response = assert_in_brownout(
+      "https://127.0.0.1:9081/#{unique_test_class_id}/info/",
+      host: "active-brownout-all-paths.#{unique_test_class_hostname}",
+    )
+    record = wait_for_log(response)[:hit_source]
+    assert_equal(410, record["response_status"])
+    assert_logs_base_fields(record, api_user, request_host: "active-brownout-all-paths.#{unique_test_class_hostname}", request_scheme: "https")
+    assert_equal("scheduled_brownout", record["gatekeeper_denied_code"])
   end
 
   private

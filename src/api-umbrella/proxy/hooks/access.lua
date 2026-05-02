@@ -31,11 +31,6 @@ if err then
   return error_handler(ngx_ctx, err, settings)
 end
 
-err, err_data = scheduled_brownout(ngx_ctx, api)
-if err then
-  return error_handler(ngx_ctx, err, settings, err_data)
-end
-
 -- Find the API key set on the request.
 err = resolve_api_key(ngx_ctx)
 if err then
@@ -57,6 +52,15 @@ end
 user, err = api_key_validator(ngx_ctx, settings)
 if err then
   return error_handler(ngx_ctx, err, settings)
+end
+
+-- Check for any active brownouts for this specific API and the current time.
+--
+-- This occurs after the api_key_validator, so that the user information is
+-- fetched and logged for keys hitting this error.
+err, err_data = scheduled_brownout(ngx_ctx, api)
+if err then
+  return error_handler(ngx_ctx, err, settings, err_data)
 end
 
 -- Fetch and merge any user-specific settings.
